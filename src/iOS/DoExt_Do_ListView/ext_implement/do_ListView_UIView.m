@@ -41,7 +41,7 @@
 {
     _model = nil;
     //自定义的全局属性
-    [ (doModule*)_dataArrays Dispose];
+    [(doModule*)_dataArrays Dispose];
     for(int i =0;i<_cellTemplatesDics.count;i++){
         [(doModule*) _cellTemplatesDics Dispose];
     }
@@ -55,7 +55,7 @@
     [doUIModuleHelper OnRedraw:_model];
     
     //实现布局相关的修改
-    [doUIModuleHelper OnRedraw:_headViewModel];
+    [_headViewModel.CurrentUIModuleView OnRedraw];
     UIView *headView = (UIView *)_headViewModel.CurrentUIModuleView;
     CGFloat realW = self.frame.size.width;
     CGFloat realH = realW/_headViewModel.RealWidth*_headViewModel.RealHeight;
