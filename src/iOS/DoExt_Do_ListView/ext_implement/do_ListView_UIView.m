@@ -14,56 +14,39 @@
 #import "doIPage.h"
 #import "doISourceFS.h"
 #import "doUIContainer.h"
+#import "doIListData.h"
 
 @implementation do_ListView_UIView
 {
-    BOOL _isEditing;
-    NSMutableDictionary *_cellDics;
+    NSMutableDictionary *_cellTemplatesDics;
     UIColor *_selectColor;
-    NSString *_Address;
-    
     doUIModule *_headViewModel;
-    
-    NSMutableArray *_dataArrays;
-    NSMutableArray *_removeArrays;
-    
+    id<doIListData> _dataArrays;
     BOOL _isRefreshing;
 }
 
-- (instancetype)init
-{
-    //基础版本
-    if(self = [super initWithFrame:CGRectZero style:UITableViewStylePlain])
-    {
-        self.delegate = self;
-        self.dataSource = self;
-        
-        _isEditing = NO;
-        _cellDics = [[NSMutableDictionary alloc] init];
-        _dataArrays = [[NSMutableArray alloc] initWithCapacity:0];
-        _removeArrays = [[NSMutableArray alloc] initWithCapacity:0];
-    }
-    return self;
-}
 #pragma mark - doIUIModuleView协议方法（必须）
 //引用Model对象
 - (void) LoadView: (doUIModule *) _doUIModule
 {
     _model = (typeof(_model)) _doUIModule;
+    self.separatorStyle = UITableViewCellSeparatorStyleNone;
+    _cellTemplatesDics = [[NSMutableDictionary alloc]init];
+    self.delegate = self;
+    self.dataSource = self;
+
 }
 //销毁所有的全局对象
 - (void) OnDispose
 {
     _model = nil;
     //自定义的全局属性
-    _Address = nil;
-    [_cellDics removeAllObjects];
-    _cellDics = nil;
+    [ (doModule*)_dataArrays Dispose];
+    for(int i =0;i<_cellTemplatesDics.count;i++){
+        [(doModule*) _cellTemplatesDics Dispose];
+    }
+    [_headViewModel Dispose];
     _headViewModel = nil;
-    [_dataArrays removeAllObjects];
-    _dataArrays = nil;
-    [_removeArrays removeAllObjects];
-    _removeArrays = nil;
 }
 //实现布局
 - (void) OnRedraw
@@ -93,19 +76,37 @@
     UIColor *defulatCol = [doUIModuleHelper GetColorFromString:[_model GetProperty:@"selectedColor"].DefaultValue :[UIColor whiteColor]];
     _selectColor = [doUIModuleHelper GetColorFromString:newValue :defulatCol];
 }
-- (void)change_cell:(NSString *)newValue
+- (void)change_cellTemplates:(NSString *)newValue
 {
     NSArray *arrays = [newValue componentsSeparatedByString:@","];
-    [_cellDics removeAllObjects];
-    [self addTemplates:arrays];
+    [_cellTemplatesDics removeAllObjects];
+    for(int i=0;i<arrays.count;i++)
+    {
+        NSString *modelStr = arrays[i];
+        if(modelStr != nil && ![modelStr isEqualToString:@""])
+        {
+            doSourceFile *source = [[[_model.CurrentPage CurrentApp] SourceFS] GetSourceByFileName:modelStr];
+            if(!source)
+                [NSException raise:@"listview" format:@"试图使用无效的页面文件",nil];
+            doUIContainer* _container = [[doUIContainer alloc] init:_model.CurrentPage];
+            
+            [_container LoadFromFile:source:nil:nil];
+            doUIModule* _insertViewModel = _container.RootView;
+            if (_insertViewModel == nil) {
+                [NSException raise:@"listview" format:@"创建view失败",nil];
+            }
+            _cellTemplatesDics[modelStr] = _insertViewModel;
+            
+        }
+    }
 }
-- (void)change_herderView:(NSString *)newValue
+- (void)change_headerView:(NSString *)newValue
 {
     id<doIPage> pageModel = _model.CurrentPage;
     doSourceFile *fileName = [pageModel.CurrentApp.SourceFS GetSourceByFileName:newValue];
     if(!fileName)
     {
-        [NSException raise:@"scrollView" format:@"无效的headView:%@",newValue,nil];
+        [NSException raise:@"listview" format:@"无效的headView:%@",newValue,nil];
         return;
     }
     doUIContainer *container = [[doUIContainer alloc] init:pageModel];
@@ -113,50 +114,26 @@
     _headViewModel = container.RootView;
     if (_headViewModel == nil)
     {
-        [NSException raise:@"doLinearLayoutView" format:@"创建view失败",nil];
+        [NSException raise:@"listview" format:@"创建view失败",nil];
         return;
     }
-    _Address = [NSString stringWithFormat:@"%@",[_headViewModel UniqueKey]];
     UIView *insertView = (UIView*)_headViewModel.CurrentUIModuleView;
     if (insertView == nil)
     {
-        [NSException raise:@"doLinearLayoutView" format:@"创建view失败"];
+        [NSException raise:@"listview" format:@"创建view失败"];
         return;
     }
     [self addSubview:insertView];
     //const CGFloat *color = CGColorGetComponents([_headView.backgroundColor CGColor]);
     //self.backgroundColor = [UIColor colorWithRed:color[0]/255 green:color[1]/255 blue:color[3]/255 alpha:color[4]/255];
 }
-
+- (void)change_isShowbar:(NSString *)newValue
+{
+    NSLog(@"change_isShowbar待实现......");
+}
 #pragma mark -
 #pragma mark - 同步异步方法的实现
-/*
-    1.参数节点
-        doJsonNode *_dictParas = [parms objectAtIndex:0];
-        在节点中，获取对应的参数
-        NSString *title = [_dictParas GetOneText:@"title" :@"" ];
-        说明：第一个参数为对象名，第二为默认值
- 
-    2.脚本运行时的引擎
-        id<doIScriptEngine> _scritEngine = [parms objectAtIndex:1];
- 
- 同步：
-    3.同步回调对象(有回调需要添加如下代码)
-        doInvokeResult *_invokeResult = [parms objectAtIndex:2];
-        回调信息
-        如：（回调一个字符串信息）
-        [_invokeResult SetResultText:((doUIModule *)_model).UniqueKey];
- 异步：
-    3.获取回调函数名(异步方法都有回调)
-        NSString *_callbackName = [parms objectAtIndex:2];
-        在合适的地方进行下面的代码，完成回调
-        新建一个回调对象
-        doInvokeResult *_invokeResult = [[doInvokeResult alloc] init];
-        填入对应的信息
-        如：（回调一个字符串）
-        [_invokeResult SetResultText: @"异步方法完成"];
-        [_scritEngine Callback:_callbackName :_invokeResult];
- */
+
 //同步
 - (void)bindData:(NSArray *)parms
 {
@@ -164,60 +141,27 @@
     //id<doIScriptEngine> _scritEngine = [parms objectAtIndex:1];
     //doInvokeResult *_invokeResult = [parms objectAtIndex:2];
     //构建_invokeResult的内容
-    NSArray *dataArrays = [_dictParas GetOneNodeArray:@"data"];
-    [_dataArrays removeAllObjects];
-    [_dataArrays addObjectsFromArray:dataArrays];
-    [_removeArrays removeAllObjects];
-    [self reloadData];
-}
-- (void)addViewtemplates:(NSArray *)parms
-{
-    doJsonNode *_dictParas = [parms objectAtIndex:0];
-    //id<doIScriptEngine> _scritEngine = [parms objectAtIndex:1];
-    //doInvokeResult *_invokeResult = [parms objectAtIndex:2];
-    //构建_invokeResult的内容
-    NSString *filesStr = [_dictParas GetOneText:@"templates" :nil];
-    NSArray *arrays = [filesStr componentsSeparatedByString:@","];
-    [self addTemplates:arrays];
-}
-- (void)addData:(NSArray *)parms
-{
-    doJsonNode *_dictParas = [parms objectAtIndex:0];
-    //id<doIScriptEngine> _scritEngine = [parms objectAtIndex:1];
-    //doInvokeResult *_invokeResult = [parms objectAtIndex:2];
-    //构建_invokeResult的内容
-    NSArray *dataArrays = [_dictParas GetOneNodeArray:@"data"];
-    [_dataArrays addObjectsFromArray:dataArrays];
-    [self reloadData];
-}
-- (void)getOffsetX:(NSArray *)parms
-{
-    doInvokeResult *_invokeResult = [parms objectAtIndex:2];
-    NSString *offsetX = [NSString stringWithFormat:@"%f",self.contentOffset.x];
-    [_invokeResult SetResultText:offsetX];
-}
-- (void)getOffsetY :(NSArray *)parms
-{
-    doInvokeResult *_invokeResult = [parms objectAtIndex:2];
-    NSString *offsetY = [NSString stringWithFormat:@"%f",self.contentOffset.y];
-    [_invokeResult SetResultText:offsetY];
-}
-#pragma mark - private methed
-- (void)addTemplates:(NSArray *)arrays
-{
-    for(int i=0;i<arrays.count;i++)
+    NSString *address = [_dictParas GetOneText:@"data" :@""];
+    id listdata = [doScriptEngineHelper ParseMultitonModule:_model.CurrentScriptEngine :address ];
+    if(listdata==nil||![listdata conformsToProtocol:@protocol(doIListData)])
     {
-        NSString *modelStr = arrays[i];
-        if(modelStr != nil && ![modelStr isEqualToString:@""])
-        {
-            doSourceFile *source = [[[_model.CurrentPage CurrentApp] SourceFS] GetSourceByFileName:modelStr];
-            if(source)
-                [_cellDics setObject:source  forKey:modelStr];
-            else
-                [NSException raise:@"cell" format:@"试图使用无效的页面文件",nil];
-        }
+        [NSException raise:@"listview" format:@"bindData的data错误"];
     }
+    _dataArrays = (id<doIListData>)listdata;
 }
+- (void)getHeaderView:(NSArray *)parms
+{
+    //doJsonNode *_dictParas = [parms objectAtIndex:0];
+    //id<doIScriptEngine> _scritEngine = [parms objectAtIndex:1];
+    doInvokeResult *_invokeResult = [parms objectAtIndex:2];
+    [_invokeResult SetResultText:_headViewModel.UniqueKey];
+}
+- (void)refresh:(NSArray *)parms
+{
+    [self reloadData];
+}
+
+#pragma mark - private methed
 
 - (void)fireEvent:(int)state :(CGFloat)y
 {
@@ -232,15 +176,16 @@
 #pragma mark - tableView sourcedelegate
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
-    return _dataArrays.count;
+    return [_dataArrays GetCount];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    doJsonValue *jsonValue = [_dataArrays objectAtIndex:indexPath.row];
+    doJsonValue *jsonValue = [_dataArrays GetData:(int)indexPath.row];
     doJsonNode *dataNode = [jsonValue GetNode];
-    NSString *indentify = [dataNode GetOneText:@"cell" :@"deviceOne"];
-    id<doIUIModuleView> showView;
+    int cellIndex = [dataNode GetOneInteger:@"cellTemplate" :0];
+    NSString* indentify = [_cellTemplatesDics allKeys][cellIndex];
+    doUIModule *showCellMode;
     
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:indentify];
     if(cell == nil)
@@ -249,137 +194,45 @@
         cell.selectedBackgroundView.backgroundColor = _selectColor;
         UILongPressGestureRecognizer *longPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(longPress:)];
         [cell addGestureRecognizer:longPress];
-        
-        doSourceFile *fileName = [_cellDics objectForKey:indentify];
-        if(!fileName)
-        {
-            [NSException raise:@"cell" format:@"无效的cellModel",nil];
-            return nil;
-        }
+         doSourceFile *source = [[[_model.CurrentPage CurrentApp] SourceFS] GetSourceByFileName:indentify];
         id<doIPage> pageModel = _model.CurrentPage;
         doUIContainer *container = [[doUIContainer alloc] init:pageModel];
-        [container LoadFromFile:fileName:nil:nil];
-        doUIModule *showCellMode = container.RootView;
-        _Address = [NSString stringWithFormat:@"%@",[showCellMode UniqueKey]];
-        if (showCellMode == nil)
-        {
-            [NSException raise:@"doLinearLayoutView" format:@"创建view失败",nil];
-            return nil;
-        }
-        showView = showCellMode.CurrentUIModuleView;
+        [container LoadFromFile:source:nil:nil];
+        showCellMode = container.RootView;
+        [container LoadDefalutScriptFile:indentify];
         UIView *insertView = (UIView*)showCellMode.CurrentUIModuleView;
         id<doIUIModuleView> modelView = showCellMode.CurrentUIModuleView;
         [modelView OnRedraw];
-        if (insertView == nil)
-        {
-            [NSException raise:@"doLinearLayoutView" format:@"创建view失败"];
-            return nil;
-        }
-        insertView.frame = CGRectMake(0, 0, insertView.frame.size.width, insertView.frame.size.height);
         [[cell contentView] addSubview:insertView];
     }
     else
     {
-        showView = (id<doIUIModuleView>)[cell.contentView.subviews objectAtIndex:0];
+        showCellMode = [(id<doIUIModuleView>)[cell.contentView.subviews objectAtIndex:0] GetModel];
     }
-    [self setShowView:dataNode andView:showView];
+    [showCellMode SetModelData:nil :jsonValue];
     return cell;
 }
-
-- (void)setShowView:(doJsonNode *)dataNode andView:(id<doIUIModuleView>)showView
-{
-    if(showView)
-    {
-        doUIContainer *container = [[showView GetModel] CurrentUIContainer];
-        NSMutableDictionary *dics = [dataNode GetAllKeyValues];
-        for(NSString *key in [dics allKeys])
-        {
-            if(key && ![key isEqualToString:@""])
-            {
-                doUIModule *childModel = [container GetChildUIModuleByID:key];
-                if(childModel)
-                {
-                    doJsonValue *chiValues = [dics objectForKey:key];
-                    NSMutableDictionary *chiDic = [[NSMutableDictionary alloc] initWithDictionary:[[chiValues GetNode] GetAllKeyValues]];
-                    if(![childModel OnPropertiesChanging:chiDic])
-                    {
-                        continue;
-                    }
-                    for(NSString *name in [chiDic allKeys])
-                    {
-                        [childModel SetPropertyValue:name :[chiDic objectForKey:name]];
-                    }
-                    [childModel OnPropertiesChanged:chiDic];
-                }
-            }
-        }
-    }
-}
-
-- (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath
-{
-    return YES;
-}
-
-- (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath
-{
-    if(editingStyle == UITableViewCellEditingStyleDelete)
-    {
-        [_removeArrays addObject:[_dataArrays objectAtIndex:indexPath.row]];
-        [_dataArrays removeObjectAtIndex:indexPath.row];
-        [self deleteRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationFade];
-    }
-    else if(editingStyle == UITableViewCellEditingStyleInsert)
-    {
-        NSLog(@"当前在插入模式!");
-    }
-}
-
-//开始移动row时执行
--(void)tableView:(UITableView *)tableView moveRowAtIndexPath:(NSIndexPath *)sourceIndexPath toIndexPath:(NSIndexPath*)destinationIndexPath
-{
-    NSLog(@"moveRowAtIndexPath");
-    [_dataArrays exchangeObjectAtIndex:sourceIndexPath.row withObjectAtIndex:sourceIndexPath.row];
-}
-
-//开发可以编辑时执行
--(void)tableView:(UITableView *)tableView willBeginEditingRowAtIndexPath:(NSIndexPath *)indexPath
-{
-    NSLog(@"willBeginEditingRowAtIndexPath");
-}
-
-- (NSString *)tableView:(UITableView *)tableView titleForDeleteConfirmationButtonForRowAtIndexPath:(NSIndexPath *)indexPath
-{
-    return @"删除";
-}
-
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     NSLog(@"%s",__func__);
     
     doInvokeResult* _invokeResult = [[doInvokeResult alloc]init:_model.UniqueKey];
-    doJsonNode *node = [_dataArrays objectAtIndex:indexPath.row];
-    [_invokeResult SetResultNode:node];
+    [_invokeResult SetResultInteger:(int)indexPath.row];
     [_model.EventCenter FireEvent:@"touch":_invokeResult];
 }
 
 #pragma mark - tableView delegate
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    doJsonNode *node = [_dataArrays objectAtIndex:indexPath.row];
-    NSString *indentify = [node GetOneText:@"cell" :@"deviceOne"];
-    doSourceFile *fileName = [_cellDics objectForKey:indentify];
-    if(!fileName)
-    {
-        [NSException raise:@"cell" format:@"无效的cellModel",nil];
-        return 40;
-    }
-    id<doIPage> pageModel = _model.CurrentPage;
-    doUIContainer *container = [[doUIContainer alloc] init:pageModel];
-    [container LoadFromFile:fileName:nil:nil];
-    doUIModule *showCellMode = container.RootView;
-    return [showCellMode RealHeight];;
+    doJsonValue *jsonValue = [_dataArrays GetData:(int)indexPath.row];
+    doJsonNode *dataNode = [jsonValue GetNode];
+    int cellIndex = [dataNode GetOneInteger:@"cellTemplate" :0];
+    NSString* indentify = [_cellTemplatesDics allKeys][cellIndex];
+    doUIModule*  model = _cellTemplatesDics[indentify];
+    [model SetModelData:nil :jsonValue ];
+    [model.CurrentUIModuleView OnRedraw];
+    return ((UIView*)model.CurrentUIModuleView).frame.size.height;
 }
 
 #pragma mark - All GestureRecognizer Method
@@ -388,13 +241,10 @@
     if(longPress.state == UIGestureRecognizerStateBegan)
     {
         NSLog(@"%s",__func__);
-        _isEditing = !_isEditing;
-        [self setEditing:_isEditing animated:YES];
         UITableViewCell *cell = (UITableViewCell *)[longPress view];
         NSIndexPath *indexPath = [self indexPathForCell:cell];
         doInvokeResult* _invokeResult = [[doInvokeResult alloc]init:_model.UniqueKey];
-        doJsonNode *node = [_dataArrays objectAtIndex:indexPath.row];
-        [_invokeResult SetResultNode:node];
+        [_invokeResult SetResultInteger:(int)indexPath.row];
         [_model.EventCenter FireEvent:@"longTouch":_invokeResult];
     }
 }

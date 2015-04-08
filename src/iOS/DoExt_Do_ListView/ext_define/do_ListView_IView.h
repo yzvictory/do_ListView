@@ -12,12 +12,13 @@
 
 @required
 //属性方法
+- (void)change_cellTemplates:(NSString *)newValue;
+- (void)change_headerView:(NSString *)newValue;
+- (void)change_isShowbar:(NSString *)newValue;
 - (void)change_selectedColor:(NSString *)newValue;
-- (void)change_cell:(NSString *)newValue;
-- (void)change_herderView:(NSString *)newValue;
-//同步或异步方法
-- (void)addViewtemplates:(NSArray *)parms;
-- (void)addData:(NSArray *)parms;
-- (void)bindData:(NSArray *)parms;
 
+//同步或异步方法
+- (void)bindData:(NSArray *)parms;
+- (void)getHeaderView:(NSArray *)parms;
+- (void)refresh:(NSArray *)parms;
 @end

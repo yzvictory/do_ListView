@@ -20,13 +20,11 @@
     [super OnInit];
     
     //注册属性
-    //selectedColor -- 选中颜色
-    //cell -- cell单元
-    //herderView -- 下拉刷新view
-    
-    [self RegistProperty:[[doProperty alloc]init:@"selectedColor" :String :@"ffffff00" :NO]];
-    [self RegistProperty:[[doProperty alloc]init:@"cell" :String :@"" :YES]];
+    //属性声明
+    [self RegistProperty:[[doProperty alloc]init:@"cellTemplates" :String :@"" :YES]];
     [self RegistProperty:[[doProperty alloc]init:@"headerView" :String :@"" :YES]];
+    [self RegistProperty:[[doProperty alloc]init:@"isShowbar" :Bool :@"" :YES]];
+    [self RegistProperty:[[doProperty alloc]init:@"selectedColor" :String :@"" :YES]];
 }
 
 @end
