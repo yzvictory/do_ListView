@@ -19,7 +19,7 @@ public abstract class do_ListView_MAbstract extends DoUIModule {
 		// 注册属性
 		this.registProperty(new DoProperty("selectedColor", PropertyDataType.String, "ffffff00", true));
 		this.registProperty(new DoProperty("cellTemplates", PropertyDataType.String, "", true));
-		this.registProperty(new DoProperty("herderView", PropertyDataType.String, "", true));
+		this.registProperty(new DoProperty("headerView", PropertyDataType.String, "", true));
 		this.registProperty(new DoProperty("isShowbar", PropertyDataType.Bool, "", true));
 	}
 }

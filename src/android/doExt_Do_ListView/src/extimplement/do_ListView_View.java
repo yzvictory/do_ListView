@@ -10,10 +10,13 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.StateListDrawable;
+import android.os.Handler;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import core.DoServiceContainer;
 import core.helper.DoScriptEngineHelper;
@@ -22,6 +25,7 @@ import core.helper.DoUIModuleHelper;
 import core.helper.jsonparse.DoJsonNode;
 import core.helper.jsonparse.DoJsonValue;
 import core.interfaces.DoIListData;
+import core.interfaces.DoIPage;
 import core.interfaces.DoIScriptEngine;
 import core.interfaces.DoIUIModuleView;
 import core.object.DoInvokeResult;
@@ -39,17 +43,34 @@ import extdefine.do_ListView_MAbstract;
  * 参数解释：@_messageName字符串事件名称，@jsonResult传递事件参数对象； 获取DoInvokeResult对象方式new
  * DoInvokeResult(this.model.getUniqueKey());
  */
-public class do_ListView_View extends ListView implements DoIUIModuleView, do_ListView_IMethod, android.widget.AdapterView.OnItemClickListener, android.widget.AdapterView.OnItemLongClickListener {
+public class do_ListView_View extends LinearLayout implements DoIUIModuleView, do_ListView_IMethod, android.widget.AdapterView.OnItemClickListener, android.widget.AdapterView.OnItemLongClickListener {
 
 	/**
 	 * 每个UIview都会引用一个具体的model实例；
 	 */
 	private do_ListView_MAbstract model;
-
 	protected MyAdapter myAdapter;
+	private ListView listview;
+	// ///////////////////
+	private static final int PULL_TO_REFRESH = 0; // 下拉刷新
+	private static final int RELEASE_TO_REFRESH = 1; // 松开后刷新
+	private static final int REFRESHING = 2; // 加载中...
+	private static final int PULL_DOWN_STATE = 3; // 刷新完成
+
+	private View mHeaderView;
+	private int mHeaderViewHeight;
+	private int mLastMotionX, mLastMotionY;
+	private int mHeaderState;
+	private int mPullState;
+	private boolean supportHeaderRefresh;
+	private String headerViewAddress; // headerview 的地址
+
+	// ///////////////////
 
 	public do_ListView_View(Context context) {
 		super(context);
+		this.setOrientation(VERTICAL);
+		listview = new ListView(context);
 		myAdapter = new MyAdapter();
 	}
 
@@ -59,8 +80,245 @@ public class do_ListView_View extends ListView implements DoIUIModuleView, do_Li
 	@Override
 	public void loadView(DoUIModule _doUIModule) throws Exception {
 		this.model = (do_ListView_MAbstract) _doUIModule;
-		this.setOnItemClickListener(this);
-		this.setOnItemLongClickListener(this);
+		listview.setOnItemClickListener(this);
+		listview.setOnItemLongClickListener(this);
+
+		String _headerViewPath = this.model.getHeaderView();
+		if (_headerViewPath != null && !"".equals(_headerViewPath.trim())) {
+			try {
+				DoIPage _doPage = this.model.getCurrentPage();
+				DoSourceFile _uiFile = _doPage.getCurrentApp().getSourceFS().getSourceByFileName(_headerViewPath);
+				if (_uiFile != null) {
+
+					DoUIContainer _rootUIContainer = new DoUIContainer(_doPage);
+					_rootUIContainer.loadFromFile(_uiFile, null, null);
+					DoUIModule _model = _rootUIContainer.getRootView();
+					headerViewAddress = _model.getUniqueKey();
+
+					View _headerView = (View) _model.getCurrentUIModuleView();
+					// 设置headerView 的 宽高
+					_headerView.setLayoutParams(new LayoutParams((int) _model.getRealWidth(), (int) _model.getRealHeight()));
+					addHeaderView(_headerView);
+					this.supportHeaderRefresh = true;
+				} else {
+					this.supportHeaderRefresh = false;
+					DoServiceContainer.getLogEngine().writeDebug("试图打开一个无效的页面文件:" + _headerViewPath);
+				}
+			} catch (Exception _err) {
+				DoServiceContainer.getLogEngine().writeError("DoListView  headerView \n", _err);
+			}
+		}
+		listview.setBackgroundColor(Color.TRANSPARENT);
+		this.addView((View) listview, new LinearLayout.LayoutParams(-1, -1));
+	}
+
+	private void addHeaderView(View _mHeaderView) {
+		// header view
+		this.mHeaderView = _mHeaderView;
+		// header layout
+		DoUIModuleHelper.measureView(mHeaderView);
+		mHeaderViewHeight = mHeaderView.getMeasuredHeight();
+		LayoutParams params = new LayoutParams(LayoutParams.MATCH_PARENT, mHeaderViewHeight);
+		// 设置topMargin的值为负的header View高度,即将其隐藏在最上方
+		params.topMargin = -(mHeaderViewHeight);
+		addView(mHeaderView, params);
+	}
+
+	@Override
+	public boolean onInterceptTouchEvent(MotionEvent e) {
+		int y = (int) e.getRawY();
+		int x = (int) e.getRawX();
+		switch (e.getAction()) {
+		case MotionEvent.ACTION_DOWN:
+			// 首先拦截down事件,记录y坐标
+			mLastMotionY = y;
+			mLastMotionX = x;
+			break;
+		case MotionEvent.ACTION_MOVE:
+			// deltaY > 0 是向下运动,< 0是向上运动
+			int deltaX = x - mLastMotionX;
+			int deltaY = y - mLastMotionY;
+			boolean isRefresh = isRefreshViewScroll(deltaX, deltaY);
+			// 一旦底层View收到touch的action后调用这个方法那么父层View就不会再调用onInterceptTouchEvent了，也无法截获以后的action
+			getParent().requestDisallowInterceptTouchEvent(isRefresh);
+			if (isRefresh) {
+				return true;
+			}
+			break;
+		case MotionEvent.ACTION_UP:
+		case MotionEvent.ACTION_CANCEL:
+			break;
+		}
+		return false;
+	}
+
+	/**
+	 * 是否应该到了父View,即PullToRefreshView滑动
+	 * 
+	 * @param deltaY
+	 *            , deltaY > 0 是向下运动,< 0是向上运动
+	 * @return
+	 */
+	private boolean isRefreshViewScroll(int deltaX, int deltaY) {
+		if (mHeaderState == REFRESHING) {
+			return false;
+		}
+		// 对于ListView和GridView
+		if (listview != null) {
+			// 子view(ListView or GridView)滑动到最顶端
+			int angle = (int) (Math.atan2(Math.abs(deltaY), Math.abs(deltaX)) * 100);
+			if (angle > 60) {
+				if (deltaY > 0 && supportHeaderRefresh) {
+
+					View child = listview.getChildAt(0);
+					if (child == null) {
+						// 如果mAdapterView中没有数据,不拦截
+						mPullState = PULL_DOWN_STATE;
+						return true;
+					}
+					if (listview.getFirstVisiblePosition() == 0 && child.getTop() == 0) {
+						mPullState = PULL_DOWN_STATE;
+						return true;
+					}
+					int top = child.getTop();
+					int padding = listview.getPaddingTop();
+					if (listview.getFirstVisiblePosition() == 0 && Math.abs(top - padding) <= 8) {// 这里之前用3可以判断,但现在不行,还没找到原因
+						mPullState = PULL_DOWN_STATE;
+						return true;
+					}
+
+				}
+			}
+		}
+		return false;
+	}
+
+	/*
+	 * 如果在onInterceptTouchEvent()方法中没有拦截(即onInterceptTouchEvent()方法中 return
+	 * false)则由PullToRefreshView 的子View来处理;否则由下面的方法来处理(即由PullToRefreshView自己来处理)
+	 */
+	@Override
+	public boolean onTouchEvent(MotionEvent event) {
+		int y = (int) event.getRawY();
+		switch (event.getAction()) {
+		case MotionEvent.ACTION_DOWN:
+			// onInterceptTouchEvent已经记录
+			// mLastMotionY = y;
+			break;
+		case MotionEvent.ACTION_MOVE:
+			int deltaY = y - mLastMotionY;
+			if (mPullState == PULL_DOWN_STATE) {// 执行下拉
+				if (supportHeaderRefresh)
+					headerPrepareToRefresh(deltaY);
+				// setHeaderPadding(-mHeaderViewHeight);
+			}
+			mLastMotionY = y;
+			break;
+		case MotionEvent.ACTION_UP:
+		case MotionEvent.ACTION_CANCEL:
+			int topMargin = getHeaderTopMargin();
+			if (mPullState == PULL_DOWN_STATE) {
+				if (topMargin >= 0) {
+					// 开始刷新
+					if (supportHeaderRefresh)
+						headerRefreshing();
+				} else {
+					if (supportHeaderRefresh)
+						// 还没有执行刷新，重新隐藏
+						setHeaderTopMargin(-mHeaderViewHeight);
+				}
+			}
+			break;
+		}
+		return false;
+	}
+
+	/**
+	 * 获取当前header view 的topMargin
+	 * 
+	 */
+	private int getHeaderTopMargin() {
+		LayoutParams params = (LayoutParams) mHeaderView.getLayoutParams();
+		return params.topMargin;
+	}
+
+	/**
+	 * header refreshing
+	 * 
+	 */
+	private void headerRefreshing() {
+		mHeaderState = REFRESHING;
+		setHeaderTopMargin(0);
+		doPullRefresh(mHeaderState, 0);
+		new Handler().postDelayed(new Runnable() {
+			@Override
+			public void run() {
+				onHeaderRefreshComplete();
+			}
+		}, 3000);
+
+	}
+
+	/**
+	 * 设置header view 的topMargin的值
+	 * 
+	 * @param topMargin
+	 *            ，为0时，说明header view 刚好完全显示出来； 为-mHeaderViewHeight时，说明完全隐藏了
+	 */
+	private void setHeaderTopMargin(int topMargin) {
+		LayoutParams params = (LayoutParams) mHeaderView.getLayoutParams();
+		params.topMargin = topMargin;
+		mHeaderView.setLayoutParams(params);
+		invalidate();
+	}
+
+	/**
+	 * header view 完成更新后恢复初始状态
+	 * 
+	 */
+	public void onHeaderRefreshComplete() {
+		setHeaderTopMargin(-mHeaderViewHeight);
+		mHeaderState = PULL_TO_REFRESH;
+	}
+
+	/**
+	 * header 准备刷新,手指移动过程,还没有释放
+	 * 
+	 * @param deltaY
+	 *            ,手指滑动的距离
+	 */
+	private void headerPrepareToRefresh(int deltaY) {
+		int newTopMargin = changingHeaderViewTopMargin(deltaY);
+		// 当header view的topMargin>=0时，说明已经完全显示出来了,修改header view 的提示状态
+		if (newTopMargin >= 0 && mHeaderState != RELEASE_TO_REFRESH) {
+			mHeaderState = RELEASE_TO_REFRESH;
+		} else if (newTopMargin < 0 && newTopMargin > -mHeaderViewHeight) {// 拖动时没有释放
+			mHeaderState = PULL_TO_REFRESH;
+		}
+		doPullRefresh(mHeaderState, newTopMargin);
+	}
+
+	/**
+	 * 修改Header view top margin的值
+	 * 
+	 * @param deltaY
+	 */
+	private int changingHeaderViewTopMargin(int deltaY) {
+		LayoutParams params = (LayoutParams) mHeaderView.getLayoutParams();
+		float newTopMargin = params.topMargin + deltaY * 0.3f;
+		// 这里对上拉做一下限制,因为当前上拉后然后不释放手指直接下拉,会把下拉刷新给触发了
+		// 表示如果是在上拉后一段距离,然后直接下拉
+//		if (deltaY > 0 && mPullState == PULL_UP_STATE && Math.abs(params.topMargin) <= mHeaderViewHeight) {
+//			return params.topMargin;
+//		}
+		// 同样地,对下拉做一下限制,避免出现跟上拉操作时一样的bug
+		if (deltaY < 0 && mPullState == PULL_DOWN_STATE && Math.abs(params.topMargin) >= mHeaderViewHeight) {
+			return params.topMargin;
+		}
+		params.topMargin = (int) newTopMargin;
+		mHeaderView.setLayoutParams(params);
+		invalidate();
+		return params.topMargin;
 	}
 
 	/**
@@ -101,7 +359,7 @@ public class do_ListView_View extends ListView implements DoIUIModuleView, do_Li
 				Drawable normal = new ColorDrawable(DoUIModuleHelper.getColorFromString(_bgColor, Color.WHITE));
 				Drawable selected = new ColorDrawable(DoUIModuleHelper.getColorFromString(_selectedColor, Color.WHITE));
 				Drawable pressed = new ColorDrawable(DoUIModuleHelper.getColorFromString(_selectedColor, Color.WHITE));
-				this.setSelector(getBg(normal, selected, pressed));
+				listview.setSelector(getBg(normal, selected, pressed));
 			} catch (Exception _err) {
 				DoServiceContainer.getLogEngine().writeError("do_ListView selectedColor \n\t", _err);
 			}
@@ -109,7 +367,7 @@ public class do_ListView_View extends ListView implements DoIUIModuleView, do_Li
 
 		if (_changedValues.containsKey("cellTemplates")) {
 			initViewTemplate(_changedValues.get("cellTemplates"));
-			this.setAdapter(myAdapter);
+			listview.setAdapter(myAdapter);
 		}
 	}
 
@@ -129,6 +387,15 @@ public class do_ListView_View extends ListView implements DoIUIModuleView, do_Li
 		}
 		if ("refresh".equals(_methodName)) {
 			refresh(_dictParas, _scriptEngine, _invokeResult);
+			return true;
+		}
+
+		if ("getHeaderView".equals(_methodName)) {
+			getHeaderView(_dictParas, _scriptEngine, _invokeResult);
+			return true;
+		}
+		if ("rebound".equals(_methodName)) {
+			rebound(_dictParas, _scriptEngine, _invokeResult);
 			return true;
 		}
 		return false;
@@ -330,5 +597,26 @@ public class do_ListView_View extends ListView implements DoIUIModuleView, do_Li
 		bg.addState(View.FOCUSED_STATE_SET, selected);
 		bg.addState(View.EMPTY_STATE_SET, normal);
 		return bg;
+	}
+
+	private void getHeaderView(DoJsonNode _dictParas, DoIScriptEngine _scriptEngine, DoInvokeResult _invokeResult) {
+		_invokeResult.setResultText(headerViewAddress);
+	}
+
+	private void rebound(DoJsonNode _dictParas, DoIScriptEngine _scriptEngine, DoInvokeResult _invokeResult) {
+		onHeaderRefreshComplete();
+	}
+
+	private void doPullRefresh(int mHeaderState, int newTopMargin) {
+		DoInvokeResult _invokeResult = new DoInvokeResult(this.model.getUniqueKey());
+		try {
+			DoJsonNode _node = new DoJsonNode();
+			_node.setOneInteger("state", mHeaderState);
+			_node.setOneText("y", (newTopMargin / this.model.getYZoom()) + "");
+			_invokeResult.setResultNode(_node);
+			this.model.getEventCenter().fireEvent("pull", _invokeResult);
+		} catch (Exception _err) {
+			DoServiceContainer.getLogEngine().writeError("DoListView pull \n", _err);
+		}
 	}
 }
