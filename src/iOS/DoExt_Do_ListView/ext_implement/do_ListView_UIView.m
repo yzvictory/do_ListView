@@ -45,6 +45,8 @@
     for(int i =0;i<_cellTemplatesDics.count;i++){
         [(doModule*) _cellTemplatesDics Dispose];
     }
+    [_cellTemplatesDics removeAllObjects];
+    _cellTemplatesDics = nil;
     [_headViewModel Dispose];
     _headViewModel = nil;
 }
