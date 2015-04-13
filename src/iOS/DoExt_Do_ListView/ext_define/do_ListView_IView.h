@@ -18,7 +18,5 @@
 - (void)change_selectedColor:(NSString *)newValue;
 
 //同步或异步方法
-- (void)bindData:(NSArray *)parms;
 - (void)getHeaderView:(NSArray *)parms;
-- (void)refresh:(NSArray *)parms;
 @end

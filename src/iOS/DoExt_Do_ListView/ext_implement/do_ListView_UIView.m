@@ -14,7 +14,6 @@
 #import "doIPage.h"
 #import "doISourceFS.h"
 #import "doUIContainer.h"
-#import "doIListData.h"
 
 @implementation do_ListView_UIView
 {
@@ -137,30 +136,12 @@
 #pragma mark - 同步异步方法的实现
 
 //同步
-- (void)bindData:(NSArray *)parms
-{
-    doJsonNode *_dictParas = [parms objectAtIndex:0];
-    //id<doIScriptEngine> _scritEngine = [parms objectAtIndex:1];
-    //doInvokeResult *_invokeResult = [parms objectAtIndex:2];
-    //构建_invokeResult的内容
-    NSString *address = [_dictParas GetOneText:@"data" :@""];
-    id listdata = [doScriptEngineHelper ParseMultitonModule:_model.CurrentScriptEngine :address ];
-    if(listdata==nil||![listdata conformsToProtocol:@protocol(doIListData)])
-    {
-        [NSException raise:@"listview" format:@"bindData的data错误"];
-    }
-    _dataArrays = (id<doIListData>)listdata;
-}
 - (void)getHeaderView:(NSArray *)parms
 {
     //doJsonNode *_dictParas = [parms objectAtIndex:0];
     //id<doIScriptEngine> _scritEngine = [parms objectAtIndex:1];
     doInvokeResult *_invokeResult = [parms objectAtIndex:2];
     [_invokeResult SetResultText:_headViewModel.UniqueKey];
-}
-- (void)refresh:(NSArray *)parms
-{
-    [self reloadData];
 }
 
 #pragma mark - private methed
@@ -175,6 +156,12 @@
     [_model.EventCenter FireEvent:@"pull":_invokeResult];
 }
 
+-(void) SetModelData:(id<doIListData>) _jsonObject
+{
+    if(_dataArrays!= _jsonObject)
+        _dataArrays = _jsonObject;
+    [self reloadData];
+}
 #pragma mark - tableView sourcedelegate
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
