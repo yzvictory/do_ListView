@@ -13,9 +13,10 @@ import core.DoServiceContainer;
 import core.helper.DoSingletonModuleHelper;
 import core.helper.jsonparse.DoJsonNode;
 import core.interfaces.DoIScriptEngine;
-import core.interfaces.DoNetWorkChangedListener;
 import core.object.DoInvokeResult;
 import core.object.DoSingletonModule;
+import extapp.NetWorkChangedListener;
+import extapp.do_Network_App;
 import extdefine.do_Network_IMethod;
 
 /**
@@ -25,10 +26,11 @@ import extdefine.do_Network_IMethod;
  * 参数解释：@_messageName字符串事件名称，@jsonResult传递事件参数对象； 获取DoInvokeResult对象方式new
  * DoInvokeResult(this.getUniqueKey());
  */
-public class do_Network_Model extends DoSingletonModule implements do_Network_IMethod, DoNetWorkChangedListener {
+public class do_Network_Model extends DoSingletonModule implements do_Network_IMethod, NetWorkChangedListener {
 
 	public do_Network_Model() throws Exception {
 		super();
+		do_Network_App.getInstance().setNetWorkChangedListener(this);
 	}
 
 	/**
