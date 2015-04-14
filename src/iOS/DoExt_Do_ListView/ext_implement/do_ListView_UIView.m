@@ -125,6 +125,7 @@
         return;
     }
     [self addSubview:insertView];
+    [container LoadDefalutScriptFile:newValue];
     //const CGFloat *color = CGColorGetComponents([_headView.backgroundColor CGColor]);
     //self.backgroundColor = [UIColor colorWithRed:color[0]/255 green:color[1]/255 blue:color[3]/255 alpha:color[4]/255];
 }
@@ -134,15 +135,6 @@
 }
 #pragma mark -
 #pragma mark - 同步异步方法的实现
-
-//同步
-- (void)getHeaderView:(NSArray *)parms
-{
-    //doJsonNode *_dictParas = [parms objectAtIndex:0];
-    //id<doIScriptEngine> _scritEngine = [parms objectAtIndex:1];
-    doInvokeResult *_invokeResult = [parms objectAtIndex:2];
-    [_invokeResult SetResultText:_headViewModel.UniqueKey];
-}
 
 #pragma mark - private methed
 
