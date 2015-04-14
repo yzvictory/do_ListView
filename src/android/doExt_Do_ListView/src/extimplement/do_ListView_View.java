@@ -19,7 +19,6 @@ import android.widget.BaseAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import core.DoServiceContainer;
-import core.helper.DoScriptEngineHelper;
 import core.helper.DoTextHelper;
 import core.helper.DoUIModuleHelper;
 import core.helper.jsonparse.DoJsonNode;
@@ -29,7 +28,6 @@ import core.interfaces.DoIPage;
 import core.interfaces.DoIScriptEngine;
 import core.interfaces.DoIUIModuleView;
 import core.object.DoInvokeResult;
-import core.object.DoMultitonModule;
 import core.object.DoSourceFile;
 import core.object.DoUIContainer;
 import core.object.DoUIModule;
@@ -63,7 +61,8 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 	private int mHeaderState;
 	private int mPullState;
 	private boolean supportHeaderRefresh;
-	private String headerViewAddress; // headerview 的地址
+
+//	private String headerViewAddress; // headerview 的地址
 
 	// ///////////////////
 
@@ -93,8 +92,6 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 					DoUIContainer _rootUIContainer = new DoUIContainer(_doPage);
 					_rootUIContainer.loadFromFile(_uiFile, null, null);
 					DoUIModule _model = _rootUIContainer.getRootView();
-					headerViewAddress = _model.getUniqueKey();
-
 					View _headerView = (View) _model.getCurrentUIModuleView();
 					// 设置headerView 的 宽高
 					_headerView.setLayoutParams(new LayoutParams((int) _model.getRealWidth(), (int) _model.getRealHeight()));
@@ -381,19 +378,6 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 	 */
 	@Override
 	public boolean invokeSyncMethod(String _methodName, DoJsonNode _dictParas, DoIScriptEngine _scriptEngine, DoInvokeResult _invokeResult) throws Exception {
-		if ("bindData".equals(_methodName)) {
-			bindData(_dictParas, _scriptEngine, _invokeResult);
-			return true;
-		}
-		if ("refresh".equals(_methodName)) {
-			refresh(_dictParas, _scriptEngine, _invokeResult);
-			return true;
-		}
-
-		if ("getHeaderView".equals(_methodName)) {
-			getHeaderView(_dictParas, _scriptEngine, _invokeResult);
-			return true;
-		}
 		if ("rebound".equals(_methodName)) {
 			rebound(_dictParas, _scriptEngine, _invokeResult);
 			return true;
@@ -443,23 +427,6 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 		} catch (Exception e) {
 			DoServiceContainer.getLogEngine().writeError("解析cell属性错误： \t", e);
 		}
-	}
-
-	@Override
-	public void bindData(DoJsonNode _dictParas, DoIScriptEngine _scriptEngine, DoInvokeResult _invokeResult) throws Exception {
-		String _address = _dictParas.getOneText("data", "");
-		if (_address == null || _address.length() <= 0)
-			throw new Exception("未指定相关的DataModel参数！");
-		DoMultitonModule _multitonModule = DoScriptEngineHelper.parseMultitonModule(_scriptEngine, _address);
-		if (_multitonModule == null || !(_multitonModule instanceof DoIListData))
-			throw new Exception("model参数无效!");
-		DoIListData _listData = (DoIListData) _multitonModule;
-		myAdapter.bindData(_listData);
-	}
-
-	@Override
-	public void refresh(DoJsonNode _dictParas, DoIScriptEngine _scriptEngine, DoInvokeResult _invokeResult) throws Exception {
-		myAdapter.notifyDataSetChanged();
 	}
 
 	private class MyAdapter extends BaseAdapter {
@@ -599,10 +566,6 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 		return bg;
 	}
 
-	private void getHeaderView(DoJsonNode _dictParas, DoIScriptEngine _scriptEngine, DoInvokeResult _invokeResult) {
-		_invokeResult.setResultText(headerViewAddress);
-	}
-
 	private void rebound(DoJsonNode _dictParas, DoIScriptEngine _scriptEngine, DoInvokeResult _invokeResult) {
 		onHeaderRefreshComplete();
 	}
@@ -617,6 +580,16 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 			this.model.getEventCenter().fireEvent("pull", _invokeResult);
 		} catch (Exception _err) {
 			DoServiceContainer.getLogEngine().writeError("DoListView pull \n", _err);
+		}
+	}
+
+	public void setModelData(Object _obj) {
+		if (_obj == null)
+			return;
+		if (_obj instanceof DoIListData) {
+			DoIListData _listData = (DoIListData) _obj;
+			myAdapter.bindData(_listData);
+			myAdapter.notifyDataSetChanged();
 		}
 	}
 }
