@@ -89,6 +89,7 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 
 					DoUIContainer _rootUIContainer = new DoUIContainer(_doPage);
 					_rootUIContainer.loadFromFile(_uiFile, null, null);
+					_rootUIContainer.loadDefalutScriptFile(_headerViewPath);
 					DoUIModule _model = _rootUIContainer.getRootView();
 					View _headerView = (View) _model.getCurrentUIModuleView();
 					// 设置headerView 的 宽高
