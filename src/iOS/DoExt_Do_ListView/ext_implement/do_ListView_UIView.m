@@ -229,6 +229,10 @@
         [_model.EventCenter FireEvent:@"longTouch":_invokeResult];
     }
 }
+-(void)tableView:(UITableView*)tableView  willDisplayCell:(UITableViewCell*) cell forRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    [cell setBackgroundColor:[UIColor clearColor]];
+}
 
 #pragma mark - scrollView delegate
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView
