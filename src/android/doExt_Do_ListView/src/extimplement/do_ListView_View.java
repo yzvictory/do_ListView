@@ -62,8 +62,6 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 	private int mPullState;
 	private boolean supportHeaderRefresh;
 
-//	private String headerViewAddress; // headerview 的地址
-
 	// ///////////////////
 
 	public do_ListView_View(Context context) {
