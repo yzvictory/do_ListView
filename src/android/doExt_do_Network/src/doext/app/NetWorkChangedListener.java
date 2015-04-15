@@ -1,4 +1,4 @@
-package extapp;
+package doext.app;
 
 public interface NetWorkChangedListener {
 

@@ -1,4 +1,4 @@
-package extapp;
+package doext.app;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -15,6 +15,18 @@ import core.interfaces.DoIAppDelegate;
 public class do_Network_App implements DoIAppDelegate {
 
 	private static do_Network_App instance;
+	private String moduleTypeID;
+
+	private do_Network_App() {
+
+	}
+
+	public static do_Network_App getInstance() {
+		if (instance == null) {
+			instance = new do_Network_App();
+		}
+		return instance;
+	}
 
 	private NetWorkChangedListener netWorkChangedListener;
 	private MyReceiver receiver;
@@ -36,7 +48,6 @@ public class do_Network_App implements DoIAppDelegate {
 
 	@Override
 	public void onCreate(Context context) {
-		instance = this;
 		// /注册监听网络广播
 		IntentFilter filter = new IntentFilter();
 		filter.addAction(CONNECTIVITY_CHANGE_ACTION);
@@ -45,12 +56,16 @@ public class do_Network_App implements DoIAppDelegate {
 		context.registerReceiver(receiver, filter);
 	}
 
-	public static do_Network_App getInstance() {
-		return instance;
-	}
-
 	public void setNetWorkChangedListener(NetWorkChangedListener netWorkChangedListener) {
 		this.netWorkChangedListener = netWorkChangedListener;
+	}
+
+	public String getModuleTypeID() {
+		return moduleTypeID;
+	}
+
+	public void setModuleTypeID(String moduleTypeID) {
+		this.moduleTypeID = moduleTypeID;
 	}
 
 }

@@ -1,4 +1,4 @@
-package extimplement;
+package doext.implement;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -15,9 +15,9 @@ import core.helper.jsonparse.DoJsonNode;
 import core.interfaces.DoIScriptEngine;
 import core.object.DoInvokeResult;
 import core.object.DoSingletonModule;
-import extapp.NetWorkChangedListener;
-import extapp.do_Network_App;
-import extdefine.do_Network_IMethod;
+import doext.app.NetWorkChangedListener;
+import doext.app.do_Network_App;
+import doext.define.do_Network_IMethod;
 
 /**
  * 自定义扩展SM组件Model实现，继承DoSingletonModule抽象类，并实现do_Network_IMethod接口方法；
@@ -30,6 +30,7 @@ public class do_Network_Model extends DoSingletonModule implements do_Network_IM
 
 	public do_Network_Model() throws Exception {
 		super();
+		do_Network_App.getInstance().setModuleTypeID(getTypeID());
 		do_Network_App.getInstance().setNetWorkChangedListener(this);
 	}
 
@@ -55,7 +56,6 @@ public class do_Network_Model extends DoSingletonModule implements do_Network_IM
 			this.getOperators(_dictParas, _scriptEngine, _invokeResult);
 			return true;
 		}
-
 		return super.invokeSyncMethod(_methodName, _dictParas, _scriptEngine, _invokeResult);
 	}
 
@@ -89,7 +89,7 @@ public class do_Network_Model extends DoSingletonModule implements do_Network_IM
 	public void getIP(DoJsonNode _dictParas, DoIScriptEngine _scriptEngine, DoInvokeResult _invokeResult) throws Exception {
 		_invokeResult.setResultText(getLocalIpAddress());
 	}
-
+	
 	private String getLocalIpAddress() {
 		try {
 			for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
@@ -109,15 +109,6 @@ public class do_Network_Model extends DoSingletonModule implements do_Network_IM
 	}
 
 	/**
-	 * 需要添加到权限 <uses-permission
-	 * android:name="android.permission.ACCESS_NETWORK_STATE"/> <uses-permission
-	 * android:name="android.permission.ACCESS_WIFI_STATE"/> <uses-permission
-	 * android:name="android.permission.CHANGE_WIFI_STATE"/> <uses-permission
-	 * android:name="android.permission.WAKE_LOCK" /> <uses-permission
-	 * android:name="android.permission.INTERNET" />
-	 */
-
-	/**
 	 * 获取设备的运营商；
 	 * 
 	 * @_dictParas 参数（K,V），可以通过此对象提供相关方法来获取参数值（Key：为参数名称）；
@@ -128,7 +119,7 @@ public class do_Network_Model extends DoSingletonModule implements do_Network_IM
 	public void getOperators(DoJsonNode _dictParas, DoIScriptEngine _scriptEngine, DoInvokeResult _invokeResult) throws Exception {
 		_invokeResult.setResultText(getProvidersName(DoServiceContainer.getPageViewFactory().getAppContext()));
 	}
-
+	
 	/**
 	 * 获取手机服务商信息 需要加入权限<uses-permission
 	 * android:name="android.permission.READ_PHONE_STATE"/>
@@ -161,6 +152,7 @@ public class do_Network_Model extends DoSingletonModule implements do_Network_IM
 		String netWorkType = DoSingletonModuleHelper.getAPNType(DoServiceContainer.getPageViewFactory().getAppContext());
 		_invokeResult.setResultText(netWorkType);
 	}
+	
 
 	@Override
 	public void changed(String networkType) {
