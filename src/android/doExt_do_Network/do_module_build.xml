@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <project basedir="." default="build" name="DoExtBuild">
-	<property name="projectName" value="doExt_do_Network"/>
+	<property name="projectName" value="doExt_@TYPEID"/>
 	<property name="buildDir" value="build"/>
 	<property name="baseDir" value="${buildDir}/${projectName}"/>
 	<property name="src" value="src/doext" />
 	<property name="zip" value="package.zip"/>
 	<property name="classes" value="${buildDir}/classes" />
+	<!-- 替换为您本地Android路径JAR-->
+	<property name="androidJAR>" value="D:/tools/sdk/platforms/android-16/android.jar"/>
 
 	<target name="init">
 		<delete dir="${zip}"/>
@@ -16,9 +18,8 @@
 		<mkdir dir="${baseDir}/res"/>
 	</target>
 	
-	<!-- 替换为您本地Android路径-->
 	<path id="android.classpath">
-        <pathelement location="E:/sdk/platforms/android-16/android.jar"/>
+        <pathelement location="${androidJAR}"/>
     </path>
 
 	<target name="compile" depends="init" description="comile target">
