@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <project basedir="." default="build" name="DoExtBuild">
-	<property name="projectName" value="doExt_@TYPEID"/>
+	<property name="projectName" value="doExt_do_Network"/>
 	<property name="buildDir" value="build"/>
 	<property name="baseDir" value="${buildDir}/${projectName}"/>
 	<property name="src" value="src/doext" />
