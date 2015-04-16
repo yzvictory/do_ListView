@@ -7,7 +7,7 @@
 	<property name="zip" value="package.zip"/>
 	<property name="classes" value="${buildDir}/classes" />
 	<!-- 替换为您本地Android路径JAR-->
-	<property name="androidJAR>" value="E:/sdk/platforms/android-16/android.jar"/>
+	<property name="androidJAR>" value="D:/tools/sdk/platforms/android-16/android.jar"/>
 
 	<target name="init">
 		<delete dir="${zip}"/>
