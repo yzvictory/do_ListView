@@ -1,4 +1,4 @@
-package extimplement;
+package doext.implement;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,6 +14,7 @@ import android.os.Handler;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.LinearLayout;
@@ -31,8 +32,8 @@ import core.object.DoInvokeResult;
 import core.object.DoSourceFile;
 import core.object.DoUIContainer;
 import core.object.DoUIModule;
-import extdefine.do_ListView_IMethod;
-import extdefine.do_ListView_MAbstract;
+import doext.define.do_ListView_IMethod;
+import doext.define.do_ListView_MAbstract;
 
 /**
  * 自定义扩展UIView组件实现类，此类必须继承相应VIEW类，并实现DoIUIModuleView,Do_ListView_IMethod接口；
@@ -514,7 +515,11 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 				}
 				if (_doIUIModuleView != null) {
 					_doIUIModuleView.getModel().setModelData(null, childData);
-					return (View) _doIUIModuleView;
+
+					View _childView = (View) _doIUIModuleView;
+					// 设置headerView 的 宽高
+					_childView.setLayoutParams(new AbsListView.LayoutParams((int) _doIUIModuleView.getModel().getRealWidth(), (int) _doIUIModuleView.getModel().getRealHeight()));
+					return _childView;
 				}
 			} catch (Exception e) {
 				DoServiceContainer.getLogEngine().writeError("解析data数据错误： \t", e);

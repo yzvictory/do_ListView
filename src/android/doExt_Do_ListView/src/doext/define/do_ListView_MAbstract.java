@@ -1,4 +1,4 @@
-package extdefine;
+package doext.define;
 
 import core.object.DoUIModule;
 import core.object.DoProperty;
