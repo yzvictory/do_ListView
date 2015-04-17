@@ -18,6 +18,7 @@
 @implementation do_ListView_UIView
 {
     NSMutableDictionary *_cellTemplatesDics;
+    NSMutableArray* modulesArray;
     UIColor *_selectColor;
     doUIModule *_headViewModel;
     id<doIListData> _dataArrays;
@@ -31,6 +32,7 @@
     _model = (typeof(_model)) _doUIModule;
     self.separatorStyle = UITableViewCellSeparatorStyleNone;
     _cellTemplatesDics = [[NSMutableDictionary alloc]init];
+    modulesArray = [[NSMutableArray alloc]init];
     self.delegate = self;
     self.dataSource = self;
 
@@ -41,10 +43,14 @@
     _model = nil;
     //自定义的全局属性
     [(doModule*)_dataArrays Dispose];
-    for(int i =0;i<_cellTemplatesDics.count;i++){
-        [(doModule*) _cellTemplatesDics Dispose];
+    for(doModule* module in [_cellTemplatesDics allValues]){
+        [module Dispose];
     }
     [_cellTemplatesDics removeAllObjects];
+    for(int i =0;i<modulesArray.count;i++){
+        [(doModule*) modulesArray[i] Dispose];
+    }
+    [modulesArray removeAllObjects];
     _cellTemplatesDics = nil;
     [_headViewModel Dispose];
     _headViewModel = nil;
@@ -185,6 +191,7 @@
         id<doIUIModuleView> modelView = showCellMode.CurrentUIModuleView;
         [modelView OnRedraw];
         [[cell contentView] addSubview:insertView];
+        [modulesArray addObject:showCellMode];
     }
     else
     {
