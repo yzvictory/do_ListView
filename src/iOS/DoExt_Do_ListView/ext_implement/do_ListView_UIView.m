@@ -47,11 +47,12 @@
         [module Dispose];
     }
     [_cellTemplatesDics removeAllObjects];
+    _cellTemplatesDics = nil;
     for(int i =0;i<modulesArray.count;i++){
         [(doModule*) modulesArray[i] Dispose];
     }
     [modulesArray removeAllObjects];
-    _cellTemplatesDics = nil;
+    modulesArray = nil;
     [_headViewModel Dispose];
     _headViewModel = nil;
 }
