@@ -18,6 +18,7 @@
 @implementation do_ListView_UIView
 {
     NSMutableDictionary *_cellTemplatesDics;
+    NSMutableArray *_cellTemplatesArray;
     NSMutableArray* modulesArray;
     UIColor *_selectColor;
     doUIModule *_headViewModel;
@@ -33,6 +34,7 @@
     self.separatorStyle = UITableViewCellSeparatorStyleNone;
     _cellTemplatesDics = [[NSMutableDictionary alloc]init];
     modulesArray = [[NSMutableArray alloc]init];
+    _cellTemplatesArray = [[NSMutableArray alloc]init];
     self.delegate = self;
     self.dataSource = self;
 
@@ -53,6 +55,8 @@
     }
     [modulesArray removeAllObjects];
     modulesArray = nil;
+    [_cellTemplatesArray removeAllObjects];
+    _cellTemplatesArray = nil;
     [_headViewModel Dispose];
     _headViewModel = nil;
 }
@@ -104,7 +108,7 @@
                 [NSException raise:@"listview" format:@"创建view失败",nil];
             }
             _cellTemplatesDics[modelStr] = _insertViewModel;
-            
+            [_cellTemplatesArray addObject:modelStr];
         }
     }
 }
@@ -172,7 +176,7 @@
     doJsonValue *jsonValue = [_dataArrays GetData:(int)indexPath.row];
     doJsonNode *dataNode = [jsonValue GetNode];
     int cellIndex = [dataNode GetOneInteger:@"cellTemplate" :0];
-    NSString* indentify = [_cellTemplatesDics allKeys][cellIndex];
+    NSString* indentify = _cellTemplatesArray[cellIndex];
     doUIModule *showCellMode;
     
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:indentify];
@@ -217,7 +221,7 @@
     doJsonValue *jsonValue = [_dataArrays GetData:(int)indexPath.row];
     doJsonNode *dataNode = [jsonValue GetNode];
     int cellIndex = [dataNode GetOneInteger:@"cellTemplate" :0];
-    NSString* indentify = [_cellTemplatesDics allKeys][cellIndex];
+    NSString* indentify = _cellTemplatesArray[cellIndex];
     doUIModule*  model = _cellTemplatesDics[indentify];
     [model SetModelData:nil :jsonValue ];
     [model.CurrentUIModuleView OnRedraw];
