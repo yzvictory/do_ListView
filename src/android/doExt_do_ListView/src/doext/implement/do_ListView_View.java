@@ -10,7 +10,6 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.StateListDrawable;
-import android.os.Handler;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -247,13 +246,6 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 		mHeaderState = REFRESHING;
 		setHeaderTopMargin(0);
 		doPullRefresh(mHeaderState, 0);
-		new Handler().postDelayed(new Runnable() {
-			@Override
-			public void run() {
-				onHeaderRefreshComplete();
-			}
-		}, 3000);
-
 	}
 
 	/**
