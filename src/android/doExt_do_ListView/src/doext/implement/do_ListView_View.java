@@ -339,7 +339,7 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 		}
 		if (_changedValues.containsKey("isShowbar")) {
 			boolean _isShowbar = DoTextHelper.strToBool(_changedValues.get("isShowbar"), true);
-			this.setVerticalScrollBarEnabled(_isShowbar);
+			listview.setVerticalScrollBarEnabled(_isShowbar);
 		}
 		if (_changedValues.containsKey("selectedColor")) {
 			try {
