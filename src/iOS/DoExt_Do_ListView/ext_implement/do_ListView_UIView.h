@@ -18,5 +18,4 @@
     @private
     __weak do_ListView_UIModel *_model;
 }
--(void) SetModelData:(id<doIListData>) _jsonObject;
 @end
