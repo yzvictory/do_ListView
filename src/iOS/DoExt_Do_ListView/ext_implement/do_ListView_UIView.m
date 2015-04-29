@@ -18,6 +18,7 @@
 @implementation do_ListView_UIView
 {
     NSMutableDictionary *_cellTemplatesDics;
+    NSMutableArray* _cellTemplatesArray;
     UIColor *_selectColor;
     doUIModule *_headViewModel;
     id<doIListData> _dataArrays;
@@ -31,6 +32,7 @@
     _model = (typeof(_model)) _doUIModule;
     self.separatorStyle = UITableViewCellSeparatorStyleNone;
     _cellTemplatesDics = [[NSMutableDictionary alloc]init];
+    _cellTemplatesArray = [[NSMutableArray alloc]init];
     self.delegate = self;
     self.dataSource = self;
 
@@ -46,6 +48,8 @@
     }
     [_cellTemplatesDics removeAllObjects];
     _cellTemplatesDics = nil;
+    [_cellTemplatesArray removeAllObjects];
+    _cellTemplatesArray = nil;
     [_headViewModel Dispose];
     _headViewModel = nil;
 }
@@ -77,10 +81,11 @@
     UIColor *defulatCol = [doUIModuleHelper GetColorFromString:[_model GetProperty:@"selectedColor"].DefaultValue :[UIColor whiteColor]];
     _selectColor = [doUIModuleHelper GetColorFromString:newValue :defulatCol];
 }
-- (void)change_cellTemplates:(NSString *)newValue
+- (void)change_templates:(NSString *)newValue
 {
     NSArray *arrays = [newValue componentsSeparatedByString:@","];
     [_cellTemplatesDics removeAllObjects];
+    [_cellTemplatesArray removeAllObjects];
     for(int i=0;i<arrays.count;i++)
     {
         NSString *modelStr = arrays[i];
@@ -96,8 +101,9 @@
             if (_insertViewModel == nil) {
                 [NSException raise:@"listview" format:@"创建view失败",nil];
             }
+            [_container LoadDefalutScriptFile:modelStr];
             _cellTemplatesDics[modelStr] = _insertViewModel;
-            
+            [_cellTemplatesArray addObject:modelStr];
         }
     }
 }
@@ -135,7 +141,24 @@
 }
 #pragma mark -
 #pragma mark - 同步异步方法的实现
-
+- (void) bindItems: (NSArray*) parms
+{
+    doJsonNode * _dictParas = [parms objectAtIndex:0];
+    id<doIScriptEngine> _scriptEngine= [parms objectAtIndex:1];
+    NSString* _address = [_dictParas GetOneText:@"data": nil];
+    if (_address == nil || _address.length <= 0) [NSException raise:@"doListView" format:@"未指定相关的listview data参数！",nil];
+    id bindingModule = [doScriptEngineHelper ParseMultitonModule: _scriptEngine : _address];
+    if (bindingModule == nil) [NSException raise:@"doListView" format:@"data参数无效！",nil];
+    if([bindingModule conformsToProtocol:@protocol(doIListData)])
+    {
+        if(_dataArrays!= bindingModule)
+            _dataArrays = bindingModule;
+    }
+}
+- (void) refreshItems: (NSArray*) parms
+{
+    [self reloadData];
+}
 #pragma mark - private methed
 
 - (void)fireEvent:(int)state :(CGFloat)y
@@ -147,13 +170,6 @@
     [_invokeResult SetResultNode:node];
     [_model.EventCenter FireEvent:@"pull":_invokeResult];
 }
-
--(void) SetModelData:(id<doIListData>) _jsonObject
-{
-    if(_dataArrays!= _jsonObject)
-        _dataArrays = _jsonObject;
-    [self reloadData];
-}
 #pragma mark - tableView sourcedelegate
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
@@ -164,8 +180,8 @@
 {
     doJsonValue *jsonValue = [_dataArrays GetData:(int)indexPath.row];
     doJsonNode *dataNode = [jsonValue GetNode];
-    int cellIndex = [dataNode GetOneInteger:@"cellTemplate" :0];
-    NSString* indentify = [_cellTemplatesDics allKeys][cellIndex];
+    int cellIndex = [dataNode GetOneInteger:@"template" :0];
+    NSString* indentify = _cellTemplatesArray[cellIndex];
     doUIModule *showCellMode;
     
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:indentify];
@@ -190,7 +206,7 @@
     {
         showCellMode = [(id<doIUIModuleView>)[cell.contentView.subviews objectAtIndex:0] GetModel];
     }
-    [showCellMode SetModelData:nil :jsonValue];
+    [showCellMode SetModelData:jsonValue];
     return cell;
 }
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
@@ -208,10 +224,10 @@
 {
     doJsonValue *jsonValue = [_dataArrays GetData:(int)indexPath.row];
     doJsonNode *dataNode = [jsonValue GetNode];
-    int cellIndex = [dataNode GetOneInteger:@"cellTemplate" :0];
-    NSString* indentify = [_cellTemplatesDics allKeys][cellIndex];
+    int cellIndex = [dataNode GetOneInteger:@"template" :0];
+    NSString* indentify = _cellTemplatesArray[cellIndex];
     doUIModule*  model = _cellTemplatesDics[indentify];
-    [model SetModelData:nil :jsonValue ];
+    [model SetModelData:jsonValue ];
     [model.CurrentUIModuleView OnRedraw];
     return ((UIView*)model.CurrentUIModuleView).frame.size.height;
 }

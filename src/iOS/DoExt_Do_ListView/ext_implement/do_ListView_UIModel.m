@@ -24,18 +24,9 @@
     
     //注册属性
     //属性声明
-    [self RegistProperty:[[doProperty alloc]init:@"cellTemplates" :String :@"" :YES]];
+    [self RegistProperty:[[doProperty alloc]init:@"templates" :String :@"" :YES]];
     [self RegistProperty:[[doProperty alloc]init:@"headerView" :String :@"" :YES]];
     [self RegistProperty:[[doProperty alloc]init:@"isShowbar" :Bool :@"" :YES]];
     [self RegistProperty:[[doProperty alloc]init:@"selectedColor" :String :@"" :YES]];
-}
--(void) SetModelData:(NSMutableDictionary*) _bindParas :(id) _jsonObject
-{
-    if([_jsonObject conformsToProtocol:@protocol(doIListData)]){
-        do_ListView_UIView* view = (do_ListView_UIView*) self.CurrentUIModuleView;
-        [view SetModelData:_jsonObject];
-    }
-    else
-        [super SetModelData:_bindParas :_jsonObject ];    
 }
 @end
