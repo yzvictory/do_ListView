@@ -141,6 +141,14 @@
 }
 #pragma mark -
 #pragma mark - 同步异步方法的实现
+- (void)rebound:(NSArray *)parms
+{
+    _isRefreshing = NO;
+    [UIView animateWithDuration:0.2 animations:^{
+        self.contentInset = UIEdgeInsetsMake(0, 0, 0, 0);
+    }];
+}
+
 - (void) bindItems: (NSArray*) parms
 {
     doJsonNode * _dictParas = [parms objectAtIndex:0];
@@ -264,7 +272,8 @@
     doInvokeResult* _invokeResult = [[doInvokeResult alloc]init:_model.UniqueKey];
     [_model.EventCenter FireEvent:@"didScroll":_invokeResult];
 }
-- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
+
+- (void)scrollViewWillEndDragging:(UIScrollView *)scrollView withVelocity:(CGPoint)velocity targetContentOffset:(inout CGPoint *)targetContentOffset
 {
     UIView *_headView = (UIView *)_headViewModel.CurrentUIModuleView;
     if(scrollView.contentOffset.y < _headView.frame.size.height*(-1) && !_isRefreshing && _headView)
