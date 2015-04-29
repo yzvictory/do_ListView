@@ -319,8 +319,8 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 	 */
 	@Override
 	public boolean onPropertiesChanging(Map<String, String> _changedValues) {
-		if (_changedValues.containsKey("cellTemplates")) {
-			String value = _changedValues.get("cellTemplates");
+		if (_changedValues.containsKey("templates")) {
+			String value = _changedValues.get("templates");
 			if ("".equals(value)) {
 				return false;
 			}
@@ -356,8 +356,8 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 			}
 		}
 
-		if (_changedValues.containsKey("cellTemplates")) {
-			initViewTemplate(_changedValues.get("cellTemplates"));
+		if (_changedValues.containsKey("templates")) {
+			initViewTemplate(_changedValues.get("templates"));
 			listview.setAdapter(myAdapter);
 		}
 	}
