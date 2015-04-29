@@ -12,7 +12,7 @@
 
 @required
 //属性方法
-- (void)change_cellTemplates:(NSString *)newValue;
+- (void)change_templates:(NSString *)newValue;
 - (void)change_headerView:(NSString *)newValue;
 - (void)change_isShowbar:(NSString *)newValue;
 - (void)change_selectedColor:(NSString *)newValue;

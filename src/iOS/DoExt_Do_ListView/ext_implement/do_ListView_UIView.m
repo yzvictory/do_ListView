@@ -77,7 +77,7 @@
     UIColor *defulatCol = [doUIModuleHelper GetColorFromString:[_model GetProperty:@"selectedColor"].DefaultValue :[UIColor whiteColor]];
     _selectColor = [doUIModuleHelper GetColorFromString:newValue :defulatCol];
 }
-- (void)change_cellTemplates:(NSString *)newValue
+- (void)change_templates:(NSString *)newValue
 {
     NSArray *arrays = [newValue componentsSeparatedByString:@","];
     [_cellTemplatesDics removeAllObjects];
@@ -174,7 +174,7 @@
 {
     doJsonValue *jsonValue = [_dataArrays GetData:(int)indexPath.row];
     doJsonNode *dataNode = [jsonValue GetNode];
-    int cellIndex = [dataNode GetOneInteger:@"cellTemplate" :0];
+    int cellIndex = [dataNode GetOneInteger:@"template" :0];
     NSString* indentify = [_cellTemplatesDics allKeys][cellIndex];
     doUIModule *showCellMode;
     
