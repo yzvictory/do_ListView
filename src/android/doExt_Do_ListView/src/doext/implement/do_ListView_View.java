@@ -10,7 +10,6 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.StateListDrawable;
-import android.os.Handler;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,6 +19,7 @@ import android.widget.BaseAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import core.DoServiceContainer;
+import core.helper.DoScriptEngineHelper;
 import core.helper.DoTextHelper;
 import core.helper.DoUIModuleHelper;
 import core.helper.jsonparse.DoJsonNode;
@@ -29,6 +29,7 @@ import core.interfaces.DoIPage;
 import core.interfaces.DoIScriptEngine;
 import core.interfaces.DoIUIModuleView;
 import core.object.DoInvokeResult;
+import core.object.DoMultitonModule;
 import core.object.DoSourceFile;
 import core.object.DoUIContainer;
 import core.object.DoUIModule;
@@ -247,13 +248,6 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 		mHeaderState = REFRESHING;
 		setHeaderTopMargin(0);
 		doPullRefresh(mHeaderState, 0);
-		new Handler().postDelayed(new Runnable() {
-			@Override
-			public void run() {
-				onHeaderRefreshComplete();
-			}
-		}, 3000);
-
 	}
 
 	/**
@@ -382,6 +376,14 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 			rebound(_dictParas, _scriptEngine, _invokeResult);
 			return true;
 		}
+		if ("bindItems".equals(_methodName)) {
+			bindItems(_dictParas, _scriptEngine, _invokeResult);
+			return true;
+		}
+		if ("refreshItems".equals(_methodName)) {
+			refreshItems(_dictParas, _scriptEngine, _invokeResult);
+			return true;
+		}
 		return false;
 	}
 
@@ -402,6 +404,23 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 	public boolean invokeAsyncMethod(String _methodName, DoJsonNode _dictParas, DoIScriptEngine _scriptEngine, String _callbackFuncName) {
 		// ...do something
 		return false;
+	}
+
+	private void refreshItems(DoJsonNode _dictParas, DoIScriptEngine _scriptEngine, DoInvokeResult _invokeResult) {
+		myAdapter.notifyDataSetChanged();
+	}
+
+	private void bindItems(DoJsonNode _dictParas, DoIScriptEngine _scriptEngine, DoInvokeResult _invokeResult) throws Exception {
+		String _address = _dictParas.getOneText("data", "");
+		if (_address == null || _address.length() <= 0)
+			throw new Exception("doListView 未指定相关的listview data参数！");
+		DoMultitonModule _multitonModule = DoScriptEngineHelper.parseMultitonModule(_scriptEngine, _address);
+		if (_multitonModule == null)
+			throw new Exception("doListView data参数无效！");
+		if (_multitonModule instanceof DoIListData) {
+			DoIListData _data = (DoIListData) _multitonModule;
+			myAdapter.bindData(_data);
+		}
 	}
 
 	/**
@@ -460,7 +479,7 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 			for (int i = 0; i < _size; i++) {
 				DoJsonValue childData = (DoJsonValue) data.getData(i);
 				try {
-					Integer index = DoTextHelper.strToInt(childData.getNode().getOneText("cellTemplate", "0"), 0);
+					Integer index = DoTextHelper.strToInt(childData.getNode().getOneText("template", "0"), 0);
 					datasPositionMap.put(i, index);
 				} catch (Exception e) {
 					DoServiceContainer.getLogEngine().writeError("解析data数据错误： \t", e);
@@ -502,7 +521,7 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 			DoJsonValue childData = (DoJsonValue) data.getData(position);
 			try {
 				DoIUIModuleView _doIUIModuleView = null;
-				int _index = DoTextHelper.strToInt(childData.getNode().getOneText("cellTemplate", "0"), 0);
+				int _index = DoTextHelper.strToInt(childData.getNode().getOneText("template", "0"), 0);
 				String templateUI = cellTemplates.get(_index);
 				if (convertView == null) {
 					String content = viewTemplates.get(templateUI);
@@ -514,7 +533,7 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 					_doIUIModuleView = (DoIUIModuleView) convertView;
 				}
 				if (_doIUIModuleView != null) {
-					_doIUIModuleView.getModel().setModelData(null, childData);
+					_doIUIModuleView.getModel().setModelData(childData);
 
 					View _childView = (View) _doIUIModuleView;
 					// 设置headerView 的 宽高
@@ -584,16 +603,6 @@ public class do_ListView_View extends LinearLayout implements DoIUIModuleView, d
 			this.model.getEventCenter().fireEvent("pull", _invokeResult);
 		} catch (Exception _err) {
 			DoServiceContainer.getLogEngine().writeError("DoListView pull \n", _err);
-		}
-	}
-
-	public void setModelData(Object _obj) {
-		if (_obj == null)
-			return;
-		if (_obj instanceof DoIListData) {
-			DoIListData _listData = (DoIListData) _obj;
-			myAdapter.bindData(_listData);
-			myAdapter.notifyDataSetChanged();
 		}
 	}
 }
